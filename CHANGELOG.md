@@ -1,5 +1,65 @@
 # CHANGELOG
 
+**v7.1.2**
+* (Android) fix: Data roaming setting not available on API 32+
+* (Android) Support new media storage permissions on Android 13 / API 33.
+  * Resolves [#488](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/488).
+* (ios) bugfix: Check argument for Photo Library Access Level is not null before attempting to perform string compare.
+  * Resolves [#483](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/483).
+* (doc) Document issue with "Only this time" option in run-time permissions on Android 11+.
+  * Resolves [#486](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/486).
+
+
+**v7.1.1**
+* (Android, iOS) feat: Add `isMobileDataEnabled()` to core module.
+    * Based on PR [#478](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/478)
+* (iOS) bugfix: Only allow Bluetooth permission request if not already requested.
+    * Resolves [#477](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/477).
+* (iOS) bugfix: Resolve the correct authorization status after requesting camera roll authorization and granting LIMITED access.
+    * Resolves [#476](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/476).
+
+
+**v7.1.0**
+* (Android, iOS) feat: add support to fetch device OS and build SDK details
+
+
+**v7.0.0**
+* (Android) BREAKING chore: Remove deprecated aliases `cordova.plugins.diagnostic.runtimePermission` and  `cordova.plugins.diagnostic.runtimePermissionStatus`
+    - Use `cordova.plugins.diagnostic.permission` and `cordova.plugins.diagnostic.permissionStatus` instead.
+* (iOS) feat: Add support for Photo Library access levels on iOS 14+
+    * Resolves [#473](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/473).
+    * Add support to show Limited-Library Selection UI for Photo Roll in iOS 14+
+* (Android) feat: Add `isAirplaneModeEnabled()` to check if airplane mode is enabled on the device.
+* (iOS) feat: add support for checking Bluetooth authorization status on iOS
+* (Android) feat: Add support Bluetooth run-time permissions on API 31+
+    * Merged from PR [#465](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/465)
+* (Android) BREAKING fix: Update location API for approximate vs precise location permission on Android 12+
+    * See https://developer.android.com/training/location/permissions#approximate-request
+    * Resolves [#468](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/468).
+* (Android) fix: Update Android Location module to use LocationManager instead of Settings.Secure.LOCATION_MODE for APIs 28 and higher.
+    * Merged from PR [#466](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/466)    
+* (iOS) BREAKING fix: If `getLocationAccuracyAuthorization()` is called on <iOS 14, return `FULL` accuracy to success handler (instead of invoking error handler).
+* (iOS) fix: expose and document EPHEMERAL and PROVISIONAL authorization statues for iOS notifications.
+    * Resolves [#443](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/443).
+* (Android) fix Add support for all dangerous (runtime) permissions up to API 33.
+    * Resolves [#448](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/448) and [#460](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/460).
+* (Android) bugfix: fix cold restart for API 29+
+    * Resolves [#453](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/453).
+* (Windows) BREAKING chore: Remove support for deprecated Windows 10 Mobile platform
+* (Build) fix: Bump minimist to v1.2.6 to prevent security issues
+    * Merged from PR [#464](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/464)
+
+
+**v6.1.1**
+* Assorted type corrections
+    * Merged from PR [#446](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/446)
+    * Pin `colors` to `1.4.0`
+        * Resolves [#451](https://github.com/dpa99c/cordova-diagnostic-plugin/issues/451).
+        * Merged from PR [#452](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/452)
+        
+**v6.1.0**
+* (Android, iOS) Add `getCurrentBatteryLevel()` to core module to retrieve current device battery level.
+
 **v6.0.4**
 * (iOS) Add support for Provisional and Ephemeral notification permission statuses,
     * Merged from PR [#437](https://github.com/dpa99c/cordova-diagnostic-plugin/pull/437)

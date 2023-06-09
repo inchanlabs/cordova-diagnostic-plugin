@@ -7,6 +7,7 @@
  */
 
 #import "Diagnostic.h"
+#import <CoreTelephony/CTCellularData.h>
 
 @implementation Diagnostic
 
@@ -16,8 +17,9 @@ NSString*const UNKNOWN = @"unknown";
 NSString*const AUTHORIZATION_NOT_DETERMINED = @"not_determined";
 NSString*const AUTHORIZATION_DENIED = @"denied_always";
 NSString*const AUTHORIZATION_GRANTED = @"authorized";
-NSString*const AUTHORIZATION_PROVISIONAL = @"provisional";
-NSString*const AUTHORIZATION_EPHEMERAL = @"ephemeral";
+NSString*const AUTHORIZATION_PROVISIONAL = @"provisional"; // Remote Notifications
+NSString*const AUTHORIZATION_EPHEMERAL = @"ephemeral"; // Remote Notifications
+NSString*const AUTHORIZATION_LIMITED = @"limited"; // Photo Library
 
 // Internal constants
 static NSString*const LOG_TAG = @"Diagnostic[native]";
@@ -28,7 +30,9 @@ static NSString*const CPU_ARCH_ARMv8 = @"ARMv8";
 static NSString*const CPU_ARCH_X86 = @"X86";
 static NSString*const CPU_ARCH_X86_64 = @"X86_64";
 
+// Internal properties
 static Diagnostic* diagnostic = nil;
+static CTCellularData* cellularData;
 
 /********************************/
 #pragma mark - Public static functions
@@ -110,6 +114,7 @@ static Diagnostic* diagnostic = nil;
 
     self.debugEnabled = false;
     self.osVersion = [[[UIDevice currentDevice] systemVersion] floatValue];
+    cellularData = [[CTCellularData alloc] init];
 }
 
 // https://stackoverflow.com/a/38441011/777265
@@ -155,6 +160,75 @@ static Diagnostic* diagnostic = nil;
     }];
 }
 
+- (void) getCurrentBatteryLevel: (CDVInvokedUrlCommand*)command {
+    [self.commandDelegate runInBackground:^{
+        @try {
+            UIDevice* currentDevice = [UIDevice currentDevice];
+            [currentDevice setBatteryMonitoringEnabled:true];
+            int batteryLevel = (int)([currentDevice batteryLevel]*100);
+            [self logDebug:[NSString stringWithFormat:@"Battery level: %d", batteryLevel]];
+            [self sendPluginResultInt:batteryLevel:command];
+            [currentDevice setBatteryMonitoringEnabled:false];
+        }@catch (NSException *exception) {
+            [self handlePluginException:exception :command];
+        }
+    }];
+}
+
+- (void) getDeviceOSVersion: (CDVInvokedUrlCommand*)command {
+    [self.commandDelegate runInBackground:^{
+        @try {
+            NSString* s_version = [UIDevice currentDevice].systemVersion;
+            float f_version = [s_version floatValue];
+            
+            NSDictionary* details = @{
+                @"version": s_version,
+                @"apiLevel" : [NSNumber numberWithFloat:f_version*10000],
+                @"apiName": s_version
+            };
+              
+            [self sendPluginResultObject:details:command];
+        }@catch (NSException *exception) {
+            [self handlePluginException:exception :command];
+        }
+    }];
+}
+
+- (void) getBuildOSVersion: (CDVInvokedUrlCommand*)command {
+    [self.commandDelegate runInBackground:^{
+        @try {
+            int i_min_version = __IPHONE_OS_VERSION_MIN_REQUIRED;
+            NSString* s_min_version = [NSString stringWithFormat:@"%.01f", (float) i_min_version/10000];
+            int i_target_version = __IPHONE_OS_VERSION_MAX_ALLOWED;
+            NSString* s_target_version = [NSString stringWithFormat:@"%.01f", (float) i_target_version/10000];
+            
+            NSDictionary* details = @{
+                @"targetApiLevel": [NSNumber numberWithInt:i_target_version],
+                @"targetApiName": s_target_version,
+                @"minApiLevel": [NSNumber numberWithInt:i_min_version],
+                @"minApiName": s_min_version
+            };
+              
+            [self sendPluginResultObject:details:command];
+        }@catch (NSException *exception) {
+            [self handlePluginException:exception :command];
+        }
+    }];
+}
+
+- (void) isMobileDataEnabled: (CDVInvokedUrlCommand*)command
+{
+    [self.commandDelegate runInBackground:^{
+        @try {
+            bool isEnabled = cellularData.restrictedState == kCTCellularDataNotRestricted;;
+            [diagnostic sendPluginResultBool:isEnabled :command];
+        }
+        @catch (NSException *exception) {
+            [diagnostic handlePluginException:exception :command];
+        }
+    }];
+}
+
 
 /********************************/
 #pragma mark - Send results
@@ -163,6 +237,16 @@ static Diagnostic* diagnostic = nil;
 - (void) sendPluginResult: (CDVPluginResult*)result :(CDVInvokedUrlCommand*)command
 {
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+- (void) sendPluginResultSuccess:(CDVInvokedUrlCommand*)command{
+    [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
+}
+
+- (void) sendPluginNoResultAndKeepCallback:(CDVInvokedUrlCommand*)command {
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_NO_RESULT];
+    [pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void) sendPluginResultBool: (BOOL)result :(CDVInvokedUrlCommand*)command
@@ -179,6 +263,18 @@ static Diagnostic* diagnostic = nil;
 - (void) sendPluginResultString: (NSString*)result :(CDVInvokedUrlCommand*)command
 {
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:result];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) sendPluginResultInt: (int)result :(CDVInvokedUrlCommand*)command
+{
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt:result];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void) sendPluginResultObject: (NSDictionary*)result :(CDVInvokedUrlCommand*)command
+{
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
@@ -206,6 +302,7 @@ static Diagnostic* diagnostic = nil;
     NSError* error;
     NSData* jsonData = [NSJSONSerialization dataWithJSONObject:inputArray options:NSJSONWritingPrettyPrinted error:&error];
     NSString* jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    jsonString = [[jsonString componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]] componentsJoinedByString:@""];
     return jsonString;
 }
 
